@@ -20,7 +20,7 @@ Simulate the potential future performance of your investment portfolio:
 
 # User input
 principal = st.number_input("Total Invested Amount (TWD)", min_value=1000, step=1000, value=100000)
-current_return_pct = st.number_input("Current Return (%)", min_value=0.0, value=70.0)
+current_return_pct = st.number_input("Current Return (%)", min_value=0.0, value=5.0)
 monthly_dca = st.number_input("Monthly Contribution (TWD)", min_value=0, step=1000, value=3000)
 
 years = st.slider("Simulation Period (Years)", 1, 30, 10)
