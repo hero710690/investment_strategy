@@ -3,118 +3,135 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Investment Strategy Simulator", layout="centered")
+st.set_page_config(page_title="Investment Strategy Simulator", layout="wide")
 st.title("📈 Investment Portfolio Strategy Simulator")
 
 st.markdown("""
-Simulate the potential future performance of your investment portfolio:
-- **Total Invested Amount (TWD)**: the money you have already invested.
-- **Current Return (%)**: return on your investment so far.
-- **Monthly Contribution**: the amount you plan to add each month.
-- **Simulation Period**: how many years to simulate.
-- **Bear Market Years**: simulate market downturn at the beginning.
-- **Expected Annual Return / Volatility**: assumed average performance and fluctuation.
-- **Strategy**: how you handle your portfolio going forward.
+### 🧭 Strategy Overview & Analysis
+- **Continue Holding and Contributing**: You remain invested and continue monthly contributions. This strategy takes full advantage of dollar-cost averaging and long-term compounding, but assumes you can sustain investment discipline through bear markets.
+
+- **Stop Contributing, Hold Existing**: No further contributions are made, but you stay invested. Ideal for when cash flow is limited but you want to stay exposed to long-term market growth.
+
+- **Take Profit, Keep Principal Only**: You realize gains and revert back to your original principal amount. Useful when you're concerned about market volatility but want to stay invested conservatively.
+
+- **Take Profit and Keep Contributing**: You secure gains by taking profit and continue regular contributions. Combines risk reduction with ongoing growth potential and compounding benefits.
+
+> The simulations below show how each strategy performs under varying market conditions. Percentile lines help estimate outcomes under pessimistic, median, and optimistic scenarios.
 """)
 
-# User input
-principal = st.number_input("Total Invested Amount (TWD)", min_value=1000, step=1000, value=100000)
-current_return_pct = st.number_input("Current Return (%)", min_value=0.0, value=5.0)
-monthly_dca = st.number_input("Monthly Contribution (TWD)", min_value=0, step=1000, value=3000)
+with st.sidebar:
+    st.markdown("""
+    ### Parameters
+    Simulate the potential future performance of your investment portfolio:
+    """)
 
-years = st.slider("Simulation Period (Years)", 1, 30, 10)
-bear_years = st.slider("Bear Market Years (Beginning of Period)", 0, years, 3)
-expected_return = st.slider("Expected Annual Return (%)", 0.0, 15.0, 6.0)
-volatility = st.slider("Expected Annual Volatility (%)", 0.0, 30.0, 12.0)
-bear_return = st.slider("Bear Market Return (%)", -30.0, 0.0, -5.0)
-bear_volatility = st.slider("Bear Market Volatility (%)", 0.0, 40.0, 18.0)
+    principal = st.number_input("Total Invested Amount (TWD)", min_value=1000, step=1000, value=100000)
+    current_return_pct = st.number_input("Current Return (%)", min_value=0.0, value=5.0)
+    monthly_dca = st.number_input("Monthly Contribution (TWD)", min_value=0, step=1000, value=3000)
 
-strategy = st.selectbox("Select Strategy", [
+    years = st.slider("Simulation Period (Years)", 1, 30, 10)
+    bear_years = st.slider("Bear Market Years (Beginning of Period)", 0, years, 3)
+    expected_return = st.slider("Expected Annual Return (%)", 0.0, 15.0, 6.0)
+    volatility = st.slider("Expected Annual Volatility (%)", 0.0, 30.0, 12.0)
+    bear_return = st.slider("Bear Market Return (%)", -30.0, 0.0, -5.0)
+    bear_volatility = st.slider("Bear Market Volatility (%)", 0.0, 40.0, 18.0)
+
+strategies = [
     "Continue Holding and Contributing",
-    "Stop Contributing, Hold Existing",
+    "Take Profit and Keep Contributing",
     "Take Profit, Keep Principal Only",
-    "Take Profit and Keep Contributing"
-])
+    "Stop Contributing, Hold Existing"
+]
 
-# Initial values
-initial_value = principal * (1 + current_return_pct / 100)
-cost_basis = principal
-monthly_return = expected_return / 100 / 12
-monthly_std = volatility / 100 / np.sqrt(12)
-bear_monthly_return = bear_return / 100 / 12
-bear_monthly_std = bear_volatility / 100 / np.sqrt(12)
+summary_stats = {}
+time_series_all_strategies = {}
+contribution_series_all_strategies = {}
+final_value_all_strategies = {}
 
-simulations = 500
-months = years * 12
-bear_months = bear_years * 12
-normal_months = months - bear_months
-np.random.seed(42)
-final_values = []
-time_series_all = []
-contribution_series_all = []
+st.markdown("### 📊 Strategy Comparison Results")
 
-for _ in range(simulations):
-    value = initial_value
-    total_contribution = principal
-    time_series = [value]
-    contribution_series = [total_contribution]
+for strategy in strategies:
+    initial_value = principal * (1 + current_return_pct / 100)
+    cost_basis = principal
+    monthly_return = expected_return / 100 / 12
+    monthly_std = volatility / 100 / np.sqrt(12)
+    bear_monthly_return = bear_return / 100 / 12
+    bear_monthly_std = bear_volatility / 100 / np.sqrt(12)
 
-    if strategy in ["Take Profit, Keep Principal Only", "Take Profit and Keep Contributing"]:
-        value = cost_basis
-        total_contribution = cost_basis
+    simulations = 500
+    months = years * 12
+    bear_months = bear_years * 12
+    normal_months = months - bear_months
+    np.random.seed(42)
+    final_values = []
+    time_series_examples = []
+    contribution_series_examples = []
 
-    bear_returns = np.random.normal(bear_monthly_return, bear_monthly_std, bear_months)
-    normal_returns = np.random.normal(monthly_return, monthly_std, normal_months)
-    all_returns = np.concatenate([bear_returns, normal_returns])
+    for _ in range(simulations):
+        value = initial_value
+        total_contribution = principal
+        time_series = [value]
+        contrib_series = [total_contribution]
 
-    for r in all_returns:
-        if strategy in ["Continue Holding and Contributing", "Take Profit and Keep Contributing"]:
-            total_contribution += monthly_dca
-            value = (value + monthly_dca) * (1 + r)
-        else:
-            value = value * (1 + r)
+        if strategy in ["Take Profit, Keep Principal Only", "Take Profit and Keep Contributing"]:
+            value = cost_basis
+            total_contribution = cost_basis
 
-        time_series.append(value)
-        contribution_series.append(total_contribution)
+        bear_returns = np.random.normal(bear_monthly_return, bear_monthly_std, bear_months)
+        normal_returns = np.random.normal(monthly_return, monthly_std, normal_months)
+        all_returns = np.concatenate([bear_returns, normal_returns])
 
-    final_values.append(value)
-    time_series_all.append(time_series)
-    contribution_series_all.append(contribution_series)
+        for r in all_returns:
+            if strategy in ["Continue Holding and Contributing", "Take Profit and Keep Contributing"]:
+                total_contribution += monthly_dca
+                value = (value + monthly_dca) * (1 + r)
+            else:
+                value = value * (1 + r)
 
-# Summary table
-st.markdown("### 📊 Simulation Results (500 runs)")
-st.write(f"Simulation Period: {years} years | Bear Market: {bear_years} years | Strategy: {strategy}")
+            time_series.append(value)
+            contrib_series.append(total_contribution)
 
-percentiles = np.percentile(final_values, [10, 25, 50, 75, 90])
-result_table = pd.DataFrame({
-    "Percentile": ["Bottom 10%", "25th Percentile", "Median", "75th Percentile", "Top 10%"],
-    "Estimated Value (TWD)": [f"{int(v):,}" for v in percentiles]
-})
-st.table(result_table)
+        final_values.append(value)
+        if len(time_series_examples) < 20:
+            time_series_examples.append(time_series)
+            contribution_series_examples.append(contrib_series)
 
-# Interactive chart
-st.markdown("### 📈 Interactive Growth Paths (First 20 Simulations)")
-fig = go.Figure()
-for i in range(min(20, len(time_series_all))):
-    fig.add_trace(go.Scatter(y=time_series_all[i], mode='lines', name=f"Sim {i+1}"))
-    fig.add_trace(go.Scatter(y=contribution_series_all[i], mode='lines', name=f"Contribution {i+1}", line=dict(dash='dash'), showlegend=False))
-fig.update_layout(title="Portfolio vs Contribution Over Time",
-                  xaxis_title="Month",
-                  yaxis_title="Value (TWD)",
-                  showlegend=False,
-                  height=500)
-st.plotly_chart(fig, use_container_width=True)
+    percentiles = np.percentile(final_values, [10, 25, 50, 75, 90])
+    summary_stats[strategy] = [f"{int(v):,}" for v in percentiles]
+    time_series_all_strategies[strategy] = time_series_examples
+    contribution_series_all_strategies[strategy] = contribution_series_examples
+    final_value_all_strategies[strategy] = final_values
 
-# Bar chart
-st.markdown("### 📊 Distribution of Final Portfolio Values")
+result_df = pd.DataFrame(summary_stats, index=["10th %", "25th %", "50th %", "75th %", "90th %"]).T
+st.dataframe(result_df)
+st.markdown("### 📈 Sample Portfolio Growth by Strategy")
+grid_rows = [st.columns(2), st.columns(2)]
+
+for i, strategy in enumerate(strategies):
+    row = grid_rows[i // 2]
+    with row[i % 2]:
+        fig = go.Figure()
+        for ts, cs in zip(time_series_all_strategies[strategy], contribution_series_all_strategies[strategy]):
+            fig.add_trace(go.Scatter(y=cs, mode='lines', name='Contribution', line=dict(dash='dot'), opacity=0.3))
+            fig.add_trace(go.Scatter(y=ts, mode='lines', name='Portfolio', opacity=0.3))
+
+        fig.update_layout(title=f"{strategy}",
+                          xaxis_title="Month",
+                          yaxis_title="Value (TWD)",
+                          height=350,
+                          showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("### 📊 Median Final Portfolio Value by Strategy")
 fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
-ax_bar.hist(final_values, bins=30, color='skyblue', edgecolor='black')
-ax_bar.axvline(np.median(final_values), color='red', linestyle='--', label='Median')
-ax_bar.set_title("Histogram of Final Portfolio Values")
-ax_bar.set_xlabel("Final Value (TWD)")
-ax_bar.set_ylabel("Frequency")
-ax_bar.legend()
+medians = [int(result_df.loc[strategy]["50th %"].replace(",", "")) for strategy in strategies]
+ax_bar.bar(strategies, medians, color='skyblue', edgecolor='black')
+ax_bar.set_ylabel("Median Portfolio Value (TWD)")
+ax_bar.set_title("Comparison of Strategies - Median Outcome")
+plt.xticks(rotation=15)
 st.pyplot(fig_bar)
+
 
 st.caption("This tool is for informational purposes only. Please assess your own risk tolerance and financial goals before making investment decisions.")
