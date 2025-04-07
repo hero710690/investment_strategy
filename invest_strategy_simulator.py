@@ -5,7 +5,10 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Investment Strategy Simulator", layout="wide")
+st.set_page_config(
+    page_title="Investment Strategy Simulator", 
+    layout="wide",
+    page_icon="📈")
 st.title("📈 Investment Portfolio Strategy Simulator")
 
 st.markdown("""
