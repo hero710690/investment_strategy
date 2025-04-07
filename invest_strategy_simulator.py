@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+import seaborn as sns
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -26,6 +27,15 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("""
+    Simulate the potential future performance of your investment portfolio:
+    - **Total Invested Amount (TWD)**: the money you have already invested.
+    - **Current Return (%)**: return on your investment so far.
+    - **Monthly Contribution**: the amount you plan to add each month.
+    - **Simulation Period**: how many years to simulate.
+    - **Bear Market Years**: simulate market downturn at the beginning.
+    - **Expected Annual Return / Volatility**: assumed average performance and fluctuation.
+    - **Strategy**: how you handle your portfolio going forward.
+
     ### Parameters
     Simulate the potential future performance of your investment portfolio:
     """)
@@ -40,7 +50,9 @@ with st.sidebar:
     volatility = st.slider("Expected Annual Volatility (%)", 0.0, 30.0, 12.0)
     bear_return = st.slider("Bear Market Return (%)", -30.0, 0.0, -5.0)
     bear_volatility = st.slider("Bear Market Volatility (%)", 0.0, 40.0, 18.0)
+    simulations = st.number_input("Montecarlo simulation times", min_value=10, step=100, value=500)
 
+all_violin_data = []
 strategies = [
     "Continue Holding and Contributing",
     "Take Profit and Keep Contributing",
@@ -63,7 +75,6 @@ for strategy in strategies:
     bear_monthly_return = bear_return / 100 / 12
     bear_monthly_std = bear_volatility / 100 / np.sqrt(12)
 
-    simulations = 500
     months = years * 12
     bear_months = bear_years * 12
     normal_months = months - bear_months
@@ -106,6 +117,7 @@ for strategy in strategies:
     time_series_all_strategies[strategy] = time_series_examples
     contribution_series_all_strategies[strategy] = contribution_series_examples
     final_value_all_strategies[strategy] = final_values
+    all_violin_data.extend([(strategy, v) for v in final_values])
 
 result_df = pd.DataFrame(summary_stats, index=["10th %", "25th %", "50th %", "75th %", "90th %"]).T
 st.dataframe(result_df)
@@ -127,14 +139,16 @@ for i, strategy in enumerate(strategies):
                           showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("### 📊 Median Final Portfolio Value by Strategy")
-fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
-medians = [int(result_df.loc[strategy]["50th %"].replace(",", "")) for strategy in strategies]
-ax_bar.bar(strategies, medians, color='skyblue', edgecolor='black')
-ax_bar.set_ylabel("Median Portfolio Value (TWD)")
-ax_bar.set_title("Comparison of Strategies - Median Outcome")
-plt.xticks(rotation=15)
-st.pyplot(fig_bar)
+st.markdown("### 🎻 Final Portfolio Value Distribution - Violin Chart")
+violin_df = pd.DataFrame(all_violin_data, columns=["Strategy", "Final Value"])
+fig_violin, ax = plt.subplots(figsize=(12, 6))
+sns.violinplot(data=violin_df, x="Strategy", y="Final Value", ax=ax)
+ax.set_title("Distribution of Final Values by Strategy")
+ax.set_ylabel("Final Portfolio Value (TWD)")
+ax.set_xlabel("Strategy")
+ax.tick_params(axis='x', rotation=20)
+st.pyplot(fig_violin)
+
 
 
 st.caption("This tool is for informational purposes only. Please assess your own risk tolerance and financial goals before making investment decisions.")
