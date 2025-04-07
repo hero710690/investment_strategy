@@ -1,11 +1,22 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Investment Strategy Simulator", layout="centered")
 st.title("📈 Investment Portfolio Strategy Simulator")
-st.markdown("Simulate potential future performance of your investment portfolio based on current returns, cost basis, and contribution strategy, including market downturns and dynamic strategies.")
+
+st.markdown("""
+Simulate the potential future performance of your investment portfolio:
+- **Total Invested Amount (TWD)**: the money you have already invested.
+- **Current Return (%)**: return on your investment so far.
+- **Monthly Contribution**: the amount you plan to add each month.
+- **Simulation Period**: how many years to simulate.
+- **Bear Market Years**: simulate market downturn at the beginning.
+- **Expected Annual Return / Volatility**: assumed average performance and fluctuation.
+- **Strategy**: how you handle your portfolio going forward.
+""")
 
 # User input
 principal = st.number_input("Total Invested Amount (TWD)", min_value=1000, step=1000, value=100000)
@@ -71,9 +82,6 @@ for _ in range(simulations):
     time_series_all.append(time_series)
     contribution_series_all.append(contribution_series)
 
-# Final total contribution for baseline
-final_contribution = total_contribution
-
 # Summary table
 st.markdown("### 📊 Simulation Results (500 runs)")
 st.write(f"Simulation Period: {years} years | Bear Market: {bear_years} years | Strategy: {strategy}")
@@ -85,27 +93,28 @@ result_table = pd.DataFrame({
 })
 st.table(result_table)
 
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.hist(final_values, bins=30, color='skyblue', edgecolor='black')
-ax.axvline(np.median(final_values), color='red', linestyle='--', label='Median')
-ax.axvline(final_contribution, color='black', linestyle=':', label='Final Total Contribution')
-ax.set_title("Distribution of Final Portfolio Values")
-ax.set_xlabel("Final Value (TWD)")
-ax.set_ylabel("Frequency")
-ax.legend()
-st.pyplot(fig)
+# Interactive chart
+st.markdown("### 📈 Interactive Growth Paths (First 20 Simulations)")
+fig = go.Figure()
+for i in range(min(20, len(time_series_all))):
+    fig.add_trace(go.Scatter(y=time_series_all[i], mode='lines', name=f"Sim {i+1}"))
+    fig.add_trace(go.Scatter(y=contribution_series_all[i], mode='lines', name=f"Contribution {i+1}", line=dict(dash='dash'), showlegend=False))
+fig.update_layout(title="Portfolio vs Contribution Over Time",
+                  xaxis_title="Month",
+                  yaxis_title="Value (TWD)",
+                  showlegend=False,
+                  height=500)
+st.plotly_chart(fig, use_container_width=True)
 
-# Time series chart
-st.markdown("### 📈 Sample Growth Paths (First 20 Simulations)")
-fig2, ax2 = plt.subplots(figsize=(8, 4))
-for ts, cs in zip(time_series_all[:20], contribution_series_all[:20]):
-    ax2.plot(ts, alpha=0.4)
-    ax2.plot(cs, color='gray', linestyle='--', alpha=0.3)
-ax2.axhline(final_contribution, color='black', linestyle=':', label='Final Total Contribution')
-ax2.set_title("Portfolio Growth Over Time")
-ax2.set_xlabel("Month")
-ax2.set_ylabel("Portfolio Value (TWD)")
-ax2.legend()
-st.pyplot(fig2)
+# Bar chart
+st.markdown("### 📊 Distribution of Final Portfolio Values")
+fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
+ax_bar.hist(final_values, bins=30, color='skyblue', edgecolor='black')
+ax_bar.axvline(np.median(final_values), color='red', linestyle='--', label='Median')
+ax_bar.set_title("Histogram of Final Portfolio Values")
+ax_bar.set_xlabel("Final Value (TWD)")
+ax_bar.set_ylabel("Frequency")
+ax_bar.legend()
+st.pyplot(fig_bar)
 
 st.caption("This tool is for informational purposes only. Please assess your own risk tolerance and financial goals before making investment decisions.")
